@@ -1,10 +1,10 @@
 {
-  "name": "create-personalai",
+  "name": "create-claude-code-visualizer",
   "version": "0.1.0",
-  "description": "Create a PersonalAIssistant project — Claude Code agent platform with UI",
+  "description": "Run and manage Claude Code agents through a web UI",
   "license": "MIT",
   "bin": {
-    "create-personalai": "./index.js"
+    "create-claude-code-visualizer": "./index.js"
   },
   "files": [
     "index.js",

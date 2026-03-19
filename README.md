@@ -1,11 +1,11 @@
-# PersonalAIssistant
+# Claude Code Visualizer
 
 A personal AI assistant platform built on Claude Code. Create, manage, and run AI agents through a web UI powered by the Claude Agent SDK.
 
 ## Quick Start
 
 ```bash
-npx create-personalai my-assistant
+npx create-claude-code-visualizer my-visualizer
 ```
 
 That's it. The CLI walks you through:
@@ -18,7 +18,7 @@ That's it. The CLI walks you through:
 Then:
 
 ```bash
-cd my-assistant/personal-assistant-app
+cd my-visualizer/personal-assistant-app
 redis-server &          # Start Redis (needed for job queue)
 npm run dev:all         # Start the app + worker
 ```
@@ -30,7 +30,7 @@ Open http://localhost:3000.
 If you already have a `.claude/` folder, just point at it:
 
 ```bash
-npx create-personalai /path/to/your/project
+npx create-claude-code-visualizer /path/to/your/project
 ```
 
 The CLI merges **additively** — your existing files always win:
@@ -132,7 +132,7 @@ CREATE TABLE agent_schedules (
 The setup CLI can install the [Google Workspace CLI](https://github.com/googleworkspace/cli) and its skills automatically. If you skip it during setup:
 
 ```bash
-cd my-assistant
+cd my-visualizer
 npm install @anthropic-ai/claude-code-google-workspace
 npx gws auth setup --login
 npx skills add https://github.com/googleworkspace/cli

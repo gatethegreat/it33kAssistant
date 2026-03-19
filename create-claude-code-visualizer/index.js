@@ -95,7 +95,7 @@ function runCapture(cmd) {
 async function main() {
   console.log("");
   console.log(`${BLUE}╔══════════════════════════════════════════════════╗${NC}`);
-  console.log(`${BLUE}║       PersonalAIssistant — Project Setup        ║${NC}`);
+  console.log(`${BLUE}║       Claude Code Visualizer — Setup        ║${NC}`);
   console.log(`${BLUE}╚══════════════════════════════════════════════════╝${NC}`);
   console.log("");
 
@@ -107,7 +107,7 @@ async function main() {
       type: "text",
       name: "dir",
       message: "Project directory",
-      initial: "my-ai-assistant",
+      initial: "my-claude-visualizer",
     });
     if (!res.dir) process.exit(0);
     projectDir = res.dir;
