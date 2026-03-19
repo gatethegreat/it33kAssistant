@@ -1,0 +1,31 @@
+{
+  "name": "create-personalai",
+  "version": "0.1.0",
+  "description": "Create a PersonalAIssistant project — Claude Code agent platform with UI",
+  "license": "MIT",
+  "bin": {
+    "create-personalai": "./index.js"
+  },
+  "files": [
+    "index.js",
+    "templates/**"
+  ],
+  "scripts": {
+    "prepare-templates": "node prepare-templates.js",
+    "prepublishOnly": "node prepare-templates.js"
+  },
+  "dependencies": {
+    "prompts": "^2.4.2"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "claude",
+    "ai",
+    "assistant",
+    "agents",
+    "claude-code",
+    "create"
+  ]
+}
