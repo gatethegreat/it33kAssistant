@@ -1,196 +1,90 @@
-# Claude Code Visualizer
+# Personal AI Assistant for Claude Code
 
-A personal AI assistant platform built on Claude Code. Create, manage, and run AI agents through a web UI powered by the Claude Agent SDK.
+A ready-to-use `.claude/` configuration that turns Claude Code into a personal assistant with full Google Workspace access. Clone, authenticate, and start managing your email, calendar, documents, and files through natural conversation.
 
-## Quick Start
+## What You Get
 
-```bash
-npx create-claude-code-visualizer my-visualizer
-```
+- **8 pre-built agents** — inbox manager, meeting prep, schedule coordinator, doc drafter, weekly reporter, plus a 3-agent research verification system
+- **Research verification loop** — say "research [topic]" and it spawns Researcher, Challenger, and Fact-Checker agents that loop until findings are verified (up to 3 rounds)
+- **Google Workspace skills** — installed during setup via the GWS CLI wizard (Gmail, Calendar, Drive, Docs, Sheets, and more — you pick which ones)
+- **Safety hooks** — blocks dangerous commands, auto-approves safe ones, auto-formats code, desktop notifications
+- **Project workspaces** — each project gets its own context, memory, and resources folder so Claude picks up where you left off
+- **Slash commands** — `/add-to-todos`, `/check-todos`
 
-That's it. The CLI walks you through:
-
-1. **Anthropic API key** + **Supabase credentials**
-2. Scaffolds the Next.js app + `.claude/` config (agents, skills, commands, hooks)
-3. Optionally sets up **Google Workspace** (Gmail, Calendar, Drive, etc.)
-4. Installs dependencies
-
-Then:
+## Setup
 
 ```bash
-cd my-visualizer/personal-assistant-app
-redis-server &          # Start Redis (needed for job queue)
-npm run dev:all         # Start the app + worker
+git clone https://github.com/YOUR_USERNAME/PersonalAIssistantBase.git my-assistant
+cd my-assistant
+npm install
 ```
 
-Open http://localhost:3000.
+That's it. `npm install` installs the [Google Workspace CLI](https://github.com/googleworkspace/cli) and runs a setup wizard that walks you through Google authentication. The wizard opens a browser window for Google sign-in so the assistant can access your Gmail, Calendar, Drive, Docs, Sheets, and other services.
 
-### Add to an Existing Project
+If you skip Google auth during setup, run `npm run setup` later to connect.
 
-If you already have a `.claude/` folder, just point at it:
+### Start using it
 
 ```bash
-npx create-claude-code-visualizer /path/to/your/project
+claude
 ```
 
-The CLI merges **additively** — your existing files always win:
+Claude Code reads the `.claude/` config automatically and becomes your personal assistant. Try:
 
-| What | Behavior |
-|------|----------|
-| **Agents** | Adds ours if no file with the same name exists |
-| **Skills** | Adds ours if no skill directory with the same name exists |
-| **Commands** | Adds ours if no file with the same name exists |
-| **Hooks** | Adds safety hooks if not already present |
-| **settings.local.json** | Merges hook config, preserves your permissions |
-| **.mcp.json** | Adds chrome-devtools if missing, preserves your servers |
+- "What's on my calendar today?"
+- "Show me my unread emails"
+- "Draft a reply to the latest email from Sarah"
+- "Find the Q1 report in my Drive"
+- "Create a meeting for tomorrow at 2pm with john@example.com"
 
-## What You Need
+## Requirements
 
-| Requirement | Where to Get It |
-|-------------|----------------|
-| **Node.js 18+** | [nodejs.org](https://nodejs.org) |
-| **Redis** | `brew install redis` / `apt install redis-server` |
-| **Anthropic API key** | [console.anthropic.com](https://console.anthropic.com) |
-| **Supabase project** | [supabase.com](https://supabase.com) (free tier works) |
+- [Claude Code](https://docs.anthropic.com/en/docs/claude-code) installed
+- [Node.js 18+](https://nodejs.org)
+- A Google account
 
-### Create Supabase Tables
+## Project Structure
 
-Run this SQL in your Supabase SQL Editor:
-
-```sql
-CREATE TABLE agent_runs (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  agent_slug TEXT NOT NULL,
-  agent_name TEXT NOT NULL,
-  prompt TEXT NOT NULL,
-  output TEXT,
-  status TEXT NOT NULL DEFAULT 'queued',
-  cost_usd NUMERIC,
-  duration_ms INTEGER,
-  session_id TEXT,
-  error TEXT,
-  metadata JSONB DEFAULT '{}',
-  pending_approval JSONB,
-  schedule_id UUID,
-  event_count INTEGER DEFAULT 0,
-  created_at TIMESTAMPTZ DEFAULT now(),
-  started_at TIMESTAMPTZ,
-  completed_at TIMESTAMPTZ
-);
-
-CREATE TABLE run_events (
-  id BIGSERIAL PRIMARY KEY,
-  run_id UUID REFERENCES agent_runs(id) ON DELETE CASCADE,
-  seq INTEGER NOT NULL,
-  event_type TEXT NOT NULL,
-  payload JSONB DEFAULT '{}',
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE TABLE notifications (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  run_id UUID,
-  schedule_id UUID,
-  agent_slug TEXT NOT NULL,
-  session_id TEXT,
-  type TEXT NOT NULL,
-  title TEXT NOT NULL,
-  summary TEXT,
-  read BOOLEAN DEFAULT false,
-  created_at TIMESTAMPTZ DEFAULT now()
-);
-
-CREATE TABLE agent_schedules (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  agent_slug TEXT NOT NULL,
-  agent_name TEXT NOT NULL,
-  prompt TEXT NOT NULL,
-  cron TEXT NOT NULL,
-  skill_slug TEXT,
-  enabled BOOLEAN DEFAULT true,
-  last_run_at TIMESTAMPTZ,
-  next_run_at TIMESTAMPTZ,
-  metadata JSONB DEFAULT '{}',
-  created_at TIMESTAMPTZ DEFAULT now(),
-  updated_at TIMESTAMPTZ DEFAULT now()
-);
+```
+.claude/
+├── agents/       # 8 agents (5 productivity + 3 research verification)
+├── commands/     # Slash commands (/add-to-todos, /check-todos)
+├── hooks/        # Auto-running safety and formatting hooks
+├── skills/       # Research skill + GWS skills added during setup
+└── settings.local.json  # Hook config and permissions
+CLAUDE.md         # Assistant instructions and GWS usage guide
+package.json      # Google Workspace CLI dependency
+setup.js          # Post-install setup wizard
 ```
 
-## What's Included
+## Customization
 
-| Component | Description |
-|-----------|-------------|
-| `personal-assistant-app/` | Next.js 15 frontend + BullMQ worker for agent execution |
-| `.claude/agents/` | Agent definitions (1 example included) |
-| `.claude/commands/` | Claude Code slash commands (`/add-to-todos`, `/check-todos`) |
-| `.claude/skills/` | Skills (frontend-design + 90+ Google Workspace skills included) |
-| `.claude/hooks/` | Safety hooks (block destructive commands, auto-format, notifications) |
-| `.mcp.json` | MCP server config (Chrome DevTools + Supabase) |
+### Add your own agents
 
-## Google Workspace
+Create a file in `.claude/agents/`:
 
-The setup CLI can install the [Google Workspace CLI](https://github.com/googleworkspace/cli) and its skills automatically. If you skip it during setup:
-
-```bash
-cd my-visualizer
-npm install @anthropic-ai/claude-code-google-workspace
-npx gws auth setup --login
-npx skills add https://github.com/googleworkspace/cli
-```
-
-This gives your agents access to Gmail, Calendar, Drive, Docs, Sheets, Chat, and more.
-
-## Customizing
-
-### Add Your Own Agents
-
-Create a `.md` file in `.claude/agents/`:
-
-```yaml
+```markdown
 ---
 name: My Agent
-description: What it does
-tools: 'WebSearch, WebFetch, Read'
-color: '#10B981'
-emoji: "\U0001F916"
-vibe: Short tagline
+description: What this agent does
+tools: 'Read, WebSearch, Bash'
 ---
-# Instructions for the agent...
+
+Instructions for the agent.
 ```
 
-### Add MCP Servers
+### Add your own skills
 
-Edit `.mcp.json`:
+Create a folder in `.claude/skills/my-skill/` with a `SKILL.md` inside. Skills give the assistant specific knowledge or workflows.
 
-```json
-{
-  "mcpServers": {
-    "your-server": {
-      "command": "npx",
-      "args": ["your-mcp-server"]
-    }
-  }
-}
-```
+### Reference docs from Google Drive
 
-### Add Skills & Commands
+The assistant can read documents from any Google Drive folder you have access to. Just ask:
 
-- Skills: `.claude/skills/your-skill/SKILL.md`
-- Commands: `.claude/commands/your-command.md`
+- "Read the doc in my 'Brand Guidelines' folder"
+- "What's in the spreadsheet called 'Budget 2026'?"
+- "Find all PDFs in the 'Contracts' folder"
 
-Both are auto-discovered by the app and Claude Code.
+## License
 
-## Security
-
-- **Filesystem**: Agents can only read/write within the project directory
-- **Network**: Agents can only reach `api.anthropic.com` and your Supabase instance
-- **Bash**: Destructive commands blocked by hooks
-- **Sandbox**: Claude Agent SDK's built-in `SandboxSettings`
-
-## Stack
-
-- **Frontend**: Next.js 15, React 19, Tailwind CSS 4
-- **Agent SDK**: @anthropic-ai/claude-agent-sdk (with sandbox)
-- **Queue**: BullMQ + Redis
-- **Database**: Supabase (PostgreSQL)
-- **MCP**: Chrome DevTools, Supabase (extensible)
+MIT

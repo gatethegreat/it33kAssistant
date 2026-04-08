@@ -1,0 +1,13 @@
+{
+  "name": "personal-ai-assistant",
+  "version": "1.0.0",
+  "description": "Claude Code personal assistant with Google Workspace integration",
+  "private": true,
+  "scripts": {
+    "setup": "node setup.js",
+    "postinstall": "node setup.js"
+  },
+  "dependencies": {
+    "@googleworkspace/cli": "^0.18.1"
+  }
+}
