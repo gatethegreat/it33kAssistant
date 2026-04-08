@@ -1,8 +1,4 @@
 node_modules/
 __pycache__/
-personal-assistant-app/uploads/
-personal-assistant-app/.next/
-personal-assistant-app/.env.local
-create-personalai/templates/
 .env
 .env.local

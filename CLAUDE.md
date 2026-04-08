@@ -1,82 +1,120 @@
-# Claude Code Visualizer
+# Personal AI Assistant
 
-## What This Is
+You are a personal AI assistant running in Claude Code. You help the user manage their work across email, calendar, documents, spreadsheets, and file storage — all through Google Workspace.
 
-This is the base/template repo for Claude Code Visualizer — a web UI for creating and running Claude AI agents. Users run `npx create-claude-code-visualizer` and get a working agent platform that reads from their `.claude/` folder.
+## Google Workspace CLI
 
-## Architecture
+**Always use `npx gws` — never `gws` directly.**
 
-```
-create-claude-code-visualizer/                — npx installer package
-  index.js                        — CLI: prompts, scaffolding, GWS setup
-  prepare-templates.js            — Copies templates into package before publish
-  templates/                      — (generated at publish time from sources below)
-personal-assistant-app/           — Next.js 15 + BullMQ worker
-  src/app/                        — Pages: agents, runs, schedules, skills, settings
-  src/app/api/                    — API routes (agents, runs, AI, settings, auth)
-  src/components/                 — React components (chat, agent cards, modals, layout)
-  src/lib/                        — Core logic (agent-runner, agents, types, capabilities)
-  worker/index.ts                 — BullMQ worker that executes agents via Claude Agent SDK
-  templates/                      — Source of truth for .claude/ config that ships to users
-    claude/                       — Becomes .claude/ (agents, hooks, commands, skills, settings)
-    mcp.json                      — Becomes .mcp.json
-    CLAUDE.md                     — Becomes project root CLAUDE.md
-  ecosystem.config.js             — PM2 config for production
-docs/                             — Cloud provider guide, pricing
-```
+Before running any Google Workspace command, **read the relevant skill first** (e.g., `.claude/skills/gws-drive/SKILL.md`). Do not guess syntax — the CLI has specific flags and patterns that differ from what you might expect.
 
-## Key Files
-
-- **`src/lib/run-agent.ts`** — Core agent execution. Calls `query()` from Claude Agent SDK with sandbox settings, permission modes, MCP servers, and subagent definitions. This is where agents actually run.
-- **`src/lib/agents.ts`** — Agent discovery. Reads `.claude/agents/*.md`, parses frontmatter, returns agent metadata. The "main" assistant is hardcoded here.
-- **`src/lib/agent-runner.ts`** — Run lifecycle manager. Manages in-memory run contexts, SSE streaming, approval flows, and Supabase persistence.
-- **`src/lib/capabilities.ts`** — Discovers skills, commands, MCP servers, and subagents from the filesystem.
-- **`worker/index.ts`** — BullMQ worker for scheduled/background agent runs. Mirrors run-agent.ts logic but runs independently.
-- **`src/app/api/settings/credentials/route.ts`** — Reads/writes `.env.local` and auto-configures Supabase MCP in `.mcp.json`.
-- **`create-claude-code-visualizer/index.js`** — The `npx create-claude-code-visualizer` CLI. Handles interactive setup, file scaffolding, additive merging, and optional GWS integration.
-
-## How Setup Works
-
-`npx create-claude-code-visualizer [dir]` does the following:
-
-1. Prompts for Anthropic API key and Supabase credentials
-2. Scaffolds `personal-assistant-app/` into the target directory
-3. Merges `.claude/` config additively (agents, commands, skills, hooks, settings)
-4. Creates `.mcp.json` (merges if existing)
-5. Writes `.env.local` with credentials
-6. Runs `npm install`
-7. Optionally installs Google Workspace CLI + skills
-
-If the target directory already has `.claude/`, it merges additively — existing files always win.
-
-## Security Model
-
-- **Sandbox**: Agent execution is sandboxed via Claude Agent SDK's `SandboxSettings` — filesystem restricted to `PROJECT_ROOT/*`, network restricted to `api.anthropic.com` + Supabase domain.
-- **Permissions**: Admin users get `bypassPermissions` (inside sandbox). Operators get `canUseTool` restrictions. Viewers are read-only.
-- **Hooks**: `block-destructive.sh` catches dangerous bash commands before execution.
-
-## Development
+### Common Patterns
 
 ```bash
-cd personal-assistant-app
-npm install
-cp .env.local.example .env.local  # Fill in Anthropic key + Supabase
-redis-server                       # In another terminal
-npm run dev:all                    # Next.js + worker
+# Gmail
+npx gws gmail messages list --maxResults 10           # Recent emails
+npx gws gmail messages send --to "..." --subject "..."  # Send email
+
+# Calendar
+npx gws calendar events list                           # Upcoming events
+npx gws calendar events insert --summary "..." --start "..."  # Create event
+
+# Drive
+npx gws drive files list --q "name contains '...'"    # Search files
+npx gws drive files get --fileId "..." --alt media     # Download file
+
+# Docs
+npx gws docs documents get --params '{"documentId":"DOC_ID"}'  # Read a doc
+
+# Sheets
+npx gws sheets spreadsheets.values get --spreadsheetId "..." --range "Sheet1!A:Z"
 ```
 
-## Publishing the npx Package
+### Reading Google Docs
+
+To extract plain text from a Google Doc response:
 
 ```bash
-cd create-claude-code-visualizer
-npm install
-npm run prepare-templates   # Copies app + templates into templates/
-npm publish                 # prepublishOnly runs prepare-templates automatically
+npx gws docs documents get --params '{"documentId":"DOC_ID"}' | python3 -c "
+import json, sys
+doc = json.load(sys.stdin)
+for el in doc.get('body',{}).get('content',[]):
+    for pe in el.get('paragraph',{}).get('elements',[]):
+        sys.stdout.write(pe.get('textRun',{}).get('content',''))
+"
 ```
 
-## Conventions
+**Common mistakes to avoid:**
+- `--fileId` is NOT a valid flag for docs — use `--params '{"documentId":"..."}'`
+- `gws docs get` does NOT exist — use `gws docs documents get`
 
-- `PROJECT_ROOT` env var controls where `.claude/`, `.mcp.json`, and `CLAUDE.md` are read from. Always use it instead of hardcoded paths.
-- The main agent name is "My Assistant" — keep it generic, not personalized.
-- Templates in `personal-assistant-app/templates/` are the source of truth for what gets deployed. Edit there, not in a top-level `.claude/`.
-- The merge logic in `create-claude-code-visualizer/index.js` is additive only — never overwrite user's existing files.
+## Reference Docs from Drive
+
+When the user asks you to reference documents, use `npx gws drive` to list and read files from their Google Drive folders. You can search by folder ID, file name, or content type.
+
+## Skills
+
+Google Workspace skills are installed during setup via the GWS CLI wizard (`npx gws auth setup --login`). The user selects which skills to add — they appear in `.claude/skills/gws-*`.
+
+Always read the relevant skill file before running any `npx gws` command — don't guess syntax.
+
+## Agents
+
+Pre-built agents in `.claude/agents/`:
+- **Doc Drafter** — Draft documents from notes or outlines
+- **Inbox Manager** — Triage and respond to emails
+- **Meeting Prep** — Prepare agendas and context for upcoming meetings
+- **Schedule Coordinator** — Manage calendar and find optimal meeting times
+- **Weekly Reporter** — Generate weekly summary reports
+
+### Research Agents (triggered by the research skill)
+- **Researcher** — Deep web research, writes structured findings with sources
+- **Research Challenger** — Adversarial reviewer, challenges depth/originality/completeness
+- **Research Fact-Checker** — Independently verifies every factual claim
+
+## Projects
+
+Each project lives in `projects/<project-name>/` with:
+- **CONTEXT.md** — What the project is, goals, key people, dates, decisions, links
+- **MEMORY.md** — Running log of what's happened, open items, session history
+- **resources/** — Working files for the project (drafts, templates, reference docs, exports, notes). Always check this folder when working on a project — it's the user's scratchpad for things Claude should know about.
+
+A blank template is at `projects/_template/`.
+
+### How to use projects
+
+**When the user mentions a project by name or says "let's work on [X]":**
+1. List `projects/` to find a matching directory (fuzzy match is fine — "risk assessment" matches `annual-risk-assessment`)
+2. Read `projects/<match>/CONTEXT.md` and `projects/<match>/MEMORY.md`
+3. List `projects/<match>/resources/` and read any relevant files
+4. Use that context for the rest of the conversation
+
+**When the user says "new project [name]":**
+1. Copy `projects/_template/` to `projects/<slug>/` (including `resources/`)
+2. Help them fill in the CONTEXT.md
+
+**At the end of a project session:**
+1. Update `projects/<name>/MEMORY.md` with what was done, decisions made, and what's next
+2. Update open items (check off completed, add new ones)
+
+**When the user asks "what projects do I have?" or "what's open?":**
+1. List all directories in `projects/` (skip `_template`)
+2. Read each CONTEXT.md and report: name, status, next key date
+
+### Research output
+
+When the research skill runs for a project, output goes to `projects/<name>/research/` instead of the top-level `research/` directory.
+
+## Hooks (Automatic)
+
+These fire automatically — do not invoke manually:
+- **block-destructive** — Catches dangerous bash commands before execution
+- **auto-approve-safe** — Auto-approves safe read-only commands
+- **auto-format** — Formats code after file edits
+- **compaction-preserver** — Preserves context during conversation compression
+- **notify** — Desktop notifications when attention is needed
+
+## Slash Commands
+
+- `/add-to-todos` — Save a task
+- `/check-todos` — Review saved tasks
